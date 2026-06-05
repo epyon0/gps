@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "T7ePsEFOdTU=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\jasong.PKMSTEEL\\source\\repos\\gps\\gps\\gps.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\jasong.PKMSTEEL\\.nuget\\packages\\system.codedom\\10.0.8\\system.codedom.10.0.8.nupkg.sha512",
+    "C:\\Users\\jasong.PKMSTEEL\\.nuget\\packages\\system.management\\10.0.8\\system.management.10.0.8.nupkg.sha512"
+  ],
+  "logs": []
+}
