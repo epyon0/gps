@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Management;
 using System.Text.RegularExpressions;
+using System.IO.Ports;
 
 namespace gps
 {
@@ -9,7 +10,8 @@ namespace gps
     public partial class Form1 : Form
     {
 
-        List<SerialDevice> commInterfaces = new List<SerialDevice>();
+        List<string> commInterfaces = new List<string>();
+        SerialPort sp = new SerialPort();
 
         public Form1()
         {
@@ -19,9 +21,16 @@ namespace gps
         {
             DateTime now = DateTime.Now;
 
+            
             if (richTextBox1.TextLength + text.Length >= richTextBox1.MaxLength)
             {
-                richTextBox1.Clear();
+                if (richTextBox1.InvokeRequired)
+                {
+                    richTextBox1.Invoke(new Action(() => richTextBox1.Clear()));
+                } else
+                {
+                    richTextBox1.Clear();
+                }
             }
 
             /*
@@ -31,109 +40,104 @@ namespace gps
             }
             */
 
-            richTextBox1.AppendText(now.ToString("yyyy-MM-ddTHH:mm:ss.fff K", CultureInfo.InvariantCulture) + $" | {caller}:{number} | " + text + Environment.NewLine);
-            richTextBox1.SelectionStart = richTextBox1.TextLength;
-            richTextBox1.ScrollToCaret();
-            this.Refresh();
-        }
-
-        private List<SerialDevice> getSerialDevices()
-        {
-            debug("Getting serial devices");
-            var devices = new List<SerialDevice>();
-            var vidPattern = @"VID_([0-9A-F]{4})";
-            var pidPattern = @"PID_([0-9A-F]{4})";
-
-            using (var searcher = new ManagementObjectSearcher("SELECT * FROM WIN32_SerialPort"))
+            if (richTextBox1.InvokeRequired)
             {
-                foreach (ManagementObject port in searcher.Get())
-                {
-                    debug("Device found:");
-                    SerialDevice device = new SerialDevice();
-
-                    try {device.DeviceId = port["DeviceID"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}");}
-                    try {device.PnpDeviceId = port["PNPDeviceID"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.Caption = port["Caption"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.Name = port["Name"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.Manufacturer = port["Manufacturer"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.ProviderType = port["ProviderType"].ToString(); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.MaxBaudRate = UInt32.Parse(port["MaxBaudRate"].ToString());} catch (Exception ex) {debug($"EXCEPTION: {ex.Message}");}
-                    try {device.OSAutoDiscovered = bool.Parse(port["OSAutoDiscovered"].ToString()); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.SupportsRTSCTS = bool.Parse(port["SupportsRTSCTS"].ToString()); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.SupportsXOnXOff = bool.Parse(port["SupportsXOnXoff"].ToString()); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.SettableBaudRate = bool.Parse(port["SettableBaudRate"].ToString()); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-                    try {device.SettableDataBits = bool.Parse(port["SettableDataBits"].ToString()); } catch (Exception ex) { debug($"EXCEPTION: {ex.Message}"); }
-
-                    Match mVid = Regex.Match(device.PnpDeviceId, vidPattern, RegexOptions.IgnoreCase);
-                    Match mPid = Regex.Match(device.PnpDeviceId, pidPattern, RegexOptions.IgnoreCase);
-
-                    if (mVid.Success) device.Vid = mVid.Groups[1].Value;
-                    if (mPid.Success) device.Pid = mPid.Groups[1].Value;
-
-                    debug($"  Name = {device.Name}");
-                    debug($"  Device ID = {device.DeviceId}");
-                    debug($"  PNP Device ID = {device.PnpDeviceId}");
-                    debug($"  Caption   = {device.Caption}");
-                    debug($"  Manufacturer = {device.Manufacturer}");
-                    debug($"  Max Baud Rate = {device.MaxBaudRate}");
-                    debug($"  Provider Type = {device.ProviderType}");
-                    debug($"  OS Auto Discovered = {device.OSAutoDiscovered}");
-                    debug($"  Supports RTSCTS = {device.SupportsRTSCTS}");
-                    debug($"  Supports XOn/XOff = {device.SupportsXOnXOff}");
-                    debug($"  Settable Baud Rate = {device.SettableBaudRate}");
-                    debug($"  Settable Data Bits = {device.SettableDataBits}");
-                    debug($"  VID = {device.Vid}");
-                    debug($"  PID = {device.Pid}");
-
-                    devices.Add(device);
-                }
+                richTextBox1.Invoke(new Action(() => {
+                    richTextBox1.AppendText(now.ToString("yyyy-MM-ddTHH:mm:ss.fff K", CultureInfo.InvariantCulture) + $" | {caller}:{number} | " + text + Environment.NewLine);
+                    richTextBox1.SelectionStart = richTextBox1.TextLength;
+                    richTextBox1.ScrollToCaret();
+                    this.Refresh();
+                }));
+            } else
+            {
+                richTextBox1.AppendText(now.ToString("yyyy-MM-ddTHH:mm:ss.fff K", CultureInfo.InvariantCulture) + $" | {caller}:{number} | " + text + Environment.NewLine);
+                richTextBox1.SelectionStart = richTextBox1.TextLength;
+                richTextBox1.ScrollToCaret();
+                this.Refresh();
             }
-            return devices;
         }
 
-        private void populateCommInterfaces()
+        private void getSerialDevices()
         {
+            commInterfaces.Clear();
             commComboBox.Items.Clear();
-            commInterfaces = getSerialDevices();
-            foreach (SerialDevice commInterface in commInterfaces)
+            debug("Getting COMM devices");
+            commInterfaces = SerialPort.GetPortNames().ToList<string>();
+
+            foreach (string commInterface in commInterfaces)
             {
-                debug($"Add interface [{commInterface.DeviceId}] to commComboBox");
-                commComboBox.Items.Add(commInterface.DeviceId);
+                commComboBox.Items.Add(commInterface);
             }
             commComboBox.SelectedIndex = 0;
+        }
+
+        private SerialPort getSerialData(string device, int baudRate, Parity parity, int dataBits, StopBits stopBits)
+        {
+            SerialPort serialport = new SerialPort(device, baudRate, parity, dataBits, stopBits);
+            serialport.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+            debug($"Opening serial interface: {device}");
+            if (sp.IsOpen)
+            {
+                debug($"Serial port already open");
+                return sp;
+            }
+
+            serialport.Open();
+            return serialport;
+        }
+
+        private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
+        {
+            SerialPort sp = (SerialPort)sender;
+            string indata = sp.ReadExisting();
+            debug($"SERIAL DATA RECV: {indata}");
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             debug("Form loaded");
-            populateCommInterfaces();
         }
 
         private void refreshCommInterfacesButton_Click(object sender, EventArgs e)
         {
             refreshCommInterfacesButton.Enabled = false;
             commComboBox.Enabled = false;
-            populateCommInterfaces();
+            getSerialDevices();
             refreshCommInterfacesButton.Enabled = true;
             commComboBox.Enabled = true;
         }
-    }
 
-    public class SerialDevice
-    {
-        public string DeviceId { get; set; }
-        public string PnpDeviceId {  get; set; }
-        public string Caption { get; set; }
-        public string Vid { get; set; }
-        public string Pid { get; set; }
-        public string Name { get; set; }
-        public string Manufacturer { get; set; }
-        public string ProviderType {  get; set; }
-        public UInt32 MaxBaudRate { get; set; }
-        public bool OSAutoDiscovered {  get; set; }
-        public bool SupportsRTSCTS { get; set; }
-        public bool SupportsXOnXOff { get; set; }
-        public bool SettableBaudRate { get; set; }
-        public bool SettableDataBits { get; set; }
+        private void getSerialDataButton_Click(object sender, EventArgs e)
+        {
+            foreach (string commInterface in commInterfaces)
+            {
+                if (commInterface == commComboBox.SelectedItem.ToString())
+                {
+                    int baud = 9600;
+                    Parity parity = Parity.None;
+                    int dataBits = 8;
+                    StopBits stopBits = StopBits.One;
+                    sp = getSerialData(commInterface, 9600, Parity.None, 8, StopBits.One);
+                    break;
+                }
+            }
+        }
+
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            getSerialDevices();
+        }
+
+        private void closeSerialConnButton_Click(object sender, EventArgs e)
+        {
+            debug($"Closing serial interface: {sp.PortName}");
+            if (sp.IsOpen)
+            {
+                sp.Close();
+            } else
+            {
+                debug($"No serial port open");
+            }
+        }
     }
 }

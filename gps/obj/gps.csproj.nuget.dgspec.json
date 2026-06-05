@@ -50,6 +50,10 @@
         "net8.0-windows7.0": {
           "targetAlias": "net8.0-windows",
           "dependencies": {
+            "System.IO.Ports": {
+              "target": "Package",
+              "version": "[10.0.8, )"
+            },
             "System.Management": {
               "target": "Package",
               "version": "[10.0.8, )"
