@@ -12,8 +12,8 @@
       }
     ],
     "additionalProbingPaths": [
-      "C:\\Users\\jasong.PKMSTEEL\\.dotnet\\store\\|arch|\\|tfm|",
-      "C:\\Users\\jasong.PKMSTEEL\\.nuget\\packages",
+      "C:\\Users\\jason\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\jason\\.nuget\\packages",
       "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
     ],
     "configProperties": {
